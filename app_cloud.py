@@ -10,10 +10,8 @@ from plotly.subplots import make_subplots
 import re
 import os
 import tempfile
-import requests
 from scipy import stats
 import datetime
-import io
 
 # Configuração da página
 st.set_page_config(
@@ -22,61 +20,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Função para baixar o arquivo do Google Drive
-@st.cache_data
-def baixar_db_do_drive(url_pasta):
-    st.info("Buscando arquivo de banco de dados no Google Drive...")
-    
-    try:
-        # URL da pasta compartilhada do Google Drive
-        pasta_id = url_pasta.split('folders/')[1].split('?')[0]
-        
-        # Em produção, usar gdown para baixar o arquivo
-        import gdown
-        
-        # Criar um arquivo temporário para o banco de dados
-        temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
-        temp_db_path = temp_db.name
-        temp_db.close()
-        
-        # Listar arquivos na pasta
-        url = f"https://drive.google.com/drive/folders/{pasta_id}"
-        
-        # Usar gdown para listar e baixar o arquivo mais recente
-        # Nota: Em um ambiente real, isso seria implementado com a API do Google Drive
-        # Esta é uma simulação simplificada
-        
-        try:
-            # Simulação para ambiente de desenvolvimento
-            import shutil
-            if os.path.exists('/home/ubuntu/upload/TESTE_DIATEX_28_05_2025.db'):
-                shutil.copy('/home/ubuntu/upload/TESTE_DIATEX_28_05_2025.db', temp_db_path)
-                st.success(f"Arquivo de banco de dados baixado com sucesso (modo simulação)!")
-                return temp_db_path
-        except:
-            pass
-        
-        # Código para ambiente de produção
-        # Aqui usaríamos gdown.download_folder() para baixar todos os arquivos
-        # e então selecionaríamos o mais recente
-        
-        # Exemplo (não funcional no ambiente de sandbox):
-        # gdown.download_folder(url, output=temp_dir, quiet=False)
-        # arquivos_db = [f for f in os.listdir(temp_dir) if f.endswith('.db')]
-        # arquivo_mais_recente = max(arquivos_db, key=lambda x: os.path.getmtime(os.path.join(temp_dir, x)))
-        # shutil.copy(os.path.join(temp_dir, arquivo_mais_recente), temp_db_path)
-        
-        st.warning("Ambiente de produção: Esta versão requer implementação completa da API do Google Drive.")
-        st.info("Por favor, consulte as instruções de implantação para detalhes sobre como configurar o acesso ao Google Drive.")
-        
-        # Para fins de demonstração, retornamos o caminho do arquivo temporário
-        return temp_db_path
-        
-    except Exception as e:
-        st.error(f"Erro ao baixar o arquivo: {e}")
-        st.info("Verifique se a pasta do Google Drive está compartilhada corretamente e contém arquivos .db")
-        return None
 
 # Função para carregar os dados do banco SQLite
 @st.cache_data
@@ -262,15 +205,17 @@ Este aplicativo analisa dados do experimento DIATEX, que testa um produto para r
 de amônia durante a criação de frangos de corte. Compare os resultados entre aviários com DIATEX e TESTEMUNHA.
 """)
 
-# URL da pasta compartilhada do Google Drive
-url_drive = "https://drive.google.com/drive/folders/1kIHspKve84MXJfijYtQj-dGYJ-Z_EpXl?usp=sharing"
+# Caminho para o banco de dados local no repositório
+caminho_db = "database/TESTE_DIATEX_28_05_2025.db"
 
-# Baixar o arquivo do Google Drive
-caminho_db = baixar_db_do_drive(url_drive)
-
-if not caminho_db:
-    st.error("Arquivo de banco de dados não encontrado. Verifique se o arquivo está na pasta compartilhada do Google Drive.")
+# Verificar se o arquivo existe
+if not os.path.exists(caminho_db):
+    st.error(f"Arquivo de banco de dados não encontrado em {caminho_db}.")
+    st.info("Verifique se o arquivo está na pasta 'database' do repositório.")
     st.stop()
+
+# Exibir informação sobre o arquivo carregado
+st.info(f"Arquivo carregado: {os.path.basename(caminho_db)}")
 
 # Carregar dados
 with st.spinner('Carregando dados...'):
@@ -788,5 +733,5 @@ st.markdown(f"""
 st.sidebar.markdown("---")
 st.sidebar.info("""
 **Versão Cloud**
-Esta é a versão para Streamlit Community Cloud que acessa os dados diretamente do Google Drive.
+Esta é a versão para Streamlit Community Cloud que acessa os dados diretamente do repositório.
 """)
