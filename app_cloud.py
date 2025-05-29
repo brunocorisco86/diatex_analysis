@@ -230,7 +230,7 @@ de amônia durante a criação de frangos de corte. Compare os resultados entre 
 """)
 
 # Caminho para o banco de dados local no repositório
-caminho_db = "database/TESTE_DIATEX_28_05_2025.db"
+caminho_db = "database/TESTE_DIATEX.db"
 
 # Verificar se o arquivo existe
 if not os.path.exists(caminho_db):
