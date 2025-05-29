@@ -27,12 +27,14 @@ def carregar_dados(caminho_db):
     # Conectar ao banco de dados
     conn = sqlite3.connect(caminho_db)
     
-    # Carregar dados da tabela medicoes
+    # Carregar dados da tabela medicoes com join na tabela tratamentos
     query = """
     SELECT 
-        Fecha, Hora, NH3, Temperatura, Humedad, 
-        Nome_Arquivo, lote_composto, idade_lote, n_cama, teste
-    FROM medicoes
+        m.Fecha, m.Hora, m.NH3, m.Temperatura, m.Humedad, 
+        m.Nome_Arquivo, m.lote_composto, m.idade_lote, m.n_cama, m.teste,
+        t.produtor, t.linhagem
+    FROM medicoes m
+    LEFT JOIN tratamentos t ON m.lote_composto = t.lote_composto AND m.teste = t.teste
     """
     df = pd.read_sql_query(query, conn)
     
@@ -55,6 +57,7 @@ def carregar_dados(caminho_db):
 def criar_grafico_comparativo(df, variavel, filtro_lote=None, filtro_aviario=None, 
                              filtro_idade_min=None, filtro_idade_max=None, 
                              filtro_semana_min=None, filtro_semana_max=None, 
+                             filtro_produtor=None, filtro_linhagem=None,
                              agrupar_por='dia'):
     # Aplicar filtros
     dados = df.copy()
@@ -70,6 +73,12 @@ def criar_grafico_comparativo(df, variavel, filtro_lote=None, filtro_aviario=Non
     
     if filtro_semana_min is not None and filtro_semana_max is not None:
         dados = dados[(dados['semana_vida'] >= filtro_semana_min) & (dados['semana_vida'] <= filtro_semana_max)]
+    
+    if filtro_produtor:
+        dados = dados[dados['produtor'] == filtro_produtor]
+    
+    if filtro_linhagem:
+        dados = dados[dados['linhagem'] == filtro_linhagem]
     
     # Definir agrupamento
     if agrupar_por == 'dia':
@@ -111,7 +120,8 @@ def criar_grafico_comparativo(df, variavel, filtro_lote=None, filtro_aviario=Non
 # Função para realizar teste T
 def realizar_teste_t(df, variavel, filtro_lote=None, filtro_aviario=None, 
                     filtro_idade_min=None, filtro_idade_max=None, 
-                    filtro_semana_min=None, filtro_semana_max=None):
+                    filtro_semana_min=None, filtro_semana_max=None,
+                    filtro_produtor=None, filtro_linhagem=None):
     # Aplicar filtros
     dados = df.copy()
     
@@ -126,6 +136,12 @@ def realizar_teste_t(df, variavel, filtro_lote=None, filtro_aviario=None,
     
     if filtro_semana_min is not None and filtro_semana_max is not None:
         dados = dados[(dados['semana_vida'] >= filtro_semana_min) & (dados['semana_vida'] <= filtro_semana_max)]
+    
+    if filtro_produtor:
+        dados = dados[dados['produtor'] == filtro_produtor]
+    
+    if filtro_linhagem:
+        dados = dados[dados['linhagem'] == filtro_linhagem]
     
     # Separar dados por tratamento
     diatex = dados[dados['teste'] == 'DIATEX'][variavel].dropna()
@@ -164,7 +180,8 @@ def realizar_teste_t(df, variavel, filtro_lote=None, filtro_aviario=None,
 # Função para criar matriz de correlação
 def criar_matriz_correlacao(df, filtro_lote=None, filtro_aviario=None, 
                            filtro_idade_min=None, filtro_idade_max=None, 
-                           filtro_semana_min=None, filtro_semana_max=None, 
+                           filtro_semana_min=None, filtro_semana_max=None,
+                           filtro_produtor=None, filtro_linhagem=None,
                            tratamento=None):
     # Aplicar filtros
     dados = df.copy()
@@ -180,6 +197,12 @@ def criar_matriz_correlacao(df, filtro_lote=None, filtro_aviario=None,
     
     if filtro_semana_min is not None and filtro_semana_max is not None:
         dados = dados[(dados['semana_vida'] >= filtro_semana_min) & (dados['semana_vida'] <= filtro_semana_max)]
+    
+    if filtro_produtor:
+        dados = dados[dados['produtor'] == filtro_produtor]
+    
+    if filtro_linhagem:
+        dados = dados[dados['linhagem'] == filtro_linhagem]
     
     if tratamento:
         dados = dados[dados['teste'] == tratamento]
@@ -223,6 +246,18 @@ with st.spinner('Carregando dados...'):
 
 # Sidebar para filtros
 st.sidebar.title('Filtros')
+
+# Filtro de produtor
+produtores = ['Todos'] + sorted(df['produtor'].dropna().unique().tolist())
+filtro_produtor = st.sidebar.selectbox('Produtor', produtores)
+if filtro_produtor == 'Todos':
+    filtro_produtor = None
+
+# Filtro de linhagem
+linhagens = ['Todas'] + sorted(df['linhagem'].dropna().unique().tolist())
+filtro_linhagem = st.sidebar.selectbox('Linhagem', linhagens)
+if filtro_linhagem == 'Todas':
+    filtro_linhagem = None
 
 # Filtro de lote
 lotes = ['Todos'] + sorted(df['lote_composto'].unique().tolist())
@@ -315,6 +350,12 @@ if filtro_semana_min is not None and filtro_semana_max is not None:
     dados_filtrados = dados_filtrados[(dados_filtrados['semana_vida'] >= filtro_semana_min) & 
                                      (dados_filtrados['semana_vida'] <= filtro_semana_max)]
 
+if filtro_produtor:
+    dados_filtrados = dados_filtrados[dados_filtrados['produtor'] == filtro_produtor]
+
+if filtro_linhagem:
+    dados_filtrados = dados_filtrados[dados_filtrados['linhagem'] == filtro_linhagem]
+
 # Exibir contagem de registros
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -343,7 +384,8 @@ with tab1:
             dados_filtrados, 'NH3', 
             filtro_lote, filtro_aviario, 
             filtro_idade_min, filtro_idade_max, 
-            filtro_semana_min, filtro_semana_max, 
+            filtro_semana_min, filtro_semana_max,
+            filtro_produtor, filtro_linhagem,
             agrupar_por=agrupamento
         ),
         use_container_width=True
@@ -354,7 +396,8 @@ with tab1:
         dados_filtrados, 'NH3', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     
     st.subheader('Análise Estatística - Teste T')
@@ -378,7 +421,8 @@ with tab2:
             dados_filtrados, 'Temperatura', 
             filtro_lote, filtro_aviario, 
             filtro_idade_min, filtro_idade_max, 
-            filtro_semana_min, filtro_semana_max, 
+            filtro_semana_min, filtro_semana_max,
+            filtro_produtor, filtro_linhagem,
             agrupar_por=agrupamento
         ),
         use_container_width=True
@@ -389,7 +433,8 @@ with tab2:
         dados_filtrados, 'Temperatura', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     
     st.subheader('Análise Estatística - Teste T')
@@ -413,7 +458,8 @@ with tab3:
             dados_filtrados, 'Humedad', 
             filtro_lote, filtro_aviario, 
             filtro_idade_min, filtro_idade_max, 
-            filtro_semana_min, filtro_semana_max, 
+            filtro_semana_min, filtro_semana_max,
+            filtro_produtor, filtro_linhagem,
             agrupar_por=agrupamento
         ),
         use_container_width=True
@@ -424,7 +470,8 @@ with tab3:
         dados_filtrados, 'Humedad', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     
     st.subheader('Análise Estatística - Teste T')
@@ -455,7 +502,8 @@ with col1:
             dados_filtrados, 
             filtro_lote, filtro_aviario, 
             filtro_idade_min, filtro_idade_max, 
-            filtro_semana_min, filtro_semana_max, 
+            filtro_semana_min, filtro_semana_max,
+            filtro_produtor, filtro_linhagem,
             tratamento='DIATEX'
         ),
         use_container_width=True
@@ -467,7 +515,8 @@ with col2:
             dados_filtrados, 
             filtro_lote, filtro_aviario, 
             filtro_idade_min, filtro_idade_max, 
-            filtro_semana_min, filtro_semana_max, 
+            filtro_semana_min, filtro_semana_max,
+            filtro_produtor, filtro_linhagem,
             tratamento='TESTEMUNHA'
         ),
         use_container_width=True
@@ -652,19 +701,22 @@ if 'DIATEX' in medias_nh3 and 'TESTEMUNHA' in medias_nh3:
         dados_filtrados, 'NH3', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     resultado_temp = realizar_teste_t(
         dados_filtrados, 'Temperatura', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     resultado_umid = realizar_teste_t(
         dados_filtrados, 'Humedad', 
         filtro_lote, filtro_aviario, 
         filtro_idade_min, filtro_idade_max, 
-        filtro_semana_min, filtro_semana_max
+        filtro_semana_min, filtro_semana_max,
+        filtro_produtor, filtro_linhagem
     )
     
     # Exibir conclusões
