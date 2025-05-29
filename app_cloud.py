@@ -12,6 +12,7 @@ import os
 import tempfile
 from scipy import stats
 import datetime
+from datetime import timedelta
 
 # Configuração da página
 st.set_page_config(
@@ -774,10 +775,13 @@ if 'DIATEX' in medias_nh3 and 'TESTEMUNHA' in medias_nh3:
         """)
 
 # Rodapé
+
+# Ajustar para GMT-3
+agora_gmt3 = datetime.datetime.now() - timedelta(hours=3)
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align: center; color: gray; font-size: 0.8em;">
-    Análise de Dados DIATEX | Dados atualizados em: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}
+    Análise de Dados DIATEX | Dados atualizados em: {agora_gmt3.strftime('%d/%m/%Y %H:%M')} (GMT-3)
 </div>
 """, unsafe_allow_html=True)
 
